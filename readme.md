@@ -1,7 +1,7 @@
 
 # AOS Cheatsheet for part B (Linux kernel)
 
-This manuscript serves as the sole reference material for students undertaking the part B of the exam as a written examination. No additional documents will be permitted.
+The pdf produced in this repo is the only reference material allowed in the room for students undertaking the part B of the exam as a written examination. No additional documents will be permitted.
 
 ## Dependencies and Build instructions
 
