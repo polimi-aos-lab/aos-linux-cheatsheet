@@ -24,8 +24,32 @@ header-includes: |
 ::: three-columns
 # Tasks and concurrency 
 
-## Threads //tbd
-## Waitqueues //tbd
+## KThreads
+```c
+// Create and start a kernel thread
+struct task_struct *kthread_run(int (*threadfn)(void *data)
+  , void *data, const char namefmt[], ...);
+
+// Stop a kernel thread (to be invoked by the main thread
+int kthread_stop(struct task_struct *k);
+// Check if a thread should stop 
+bool kthread_should_stop(void);
+```
+
+## Waitqueues 
+```c
+DECLARE_WAIT_QUEUE_HEAD(<name>);
+
+// Wait for a condition to be true, interruptible
+wait_event_interruptible(wait_queue_head_t wq, condition); 
+
+// Wakes all non-exclusive waiters from the wait queue 
+// that are in an interruptible sleep state and 
+// just one in exclusive state. This must be called
+// whenever variables that impact the "condition" are changed.
+void wake_up_interruptible(wait_queue_head_t *q);
+```
+
 ## Spinlocks
 ```c
 DEFINE_SPINLOCK(<name>); 
@@ -33,18 +57,34 @@ DEFINE_SPINLOCK(<name>);
 spin_lock(spinlock_t *lock);
 spin_unlock(spinlock_t *lock);
 /* IRQ enabble/disable variants */
-void spin_lock_irqsave(spinlock_t *lock, unsigned long flags);
+void spin_lock_irqsave(spinlock_t *lock, 
+  unsigned long flags);
 void spin_unlock_irqrestore(spinlock_t *lock, 
-							unsigned long flags);
+  unsigned long flags);
 /* read write spinlocks */
 DEFINE_RWLOCK(<name>); 
 void read_lock(rwlock_t *lock);
 void read_unlock(rwlock_t *lock);
 void write_lock(rwlock_t *lock);
 void write_unlock(rwlock_t *lock);
-/* irq variants as plain spinlock  do exist as well. */
+/* *_irqsave, *_irqrestore variants do exist as well. */
 ```
-## RCU //tbd
+
+## RCU
+```c
+void rcu_read_lock(void);
+void rcu_read_unlock(void);
+// Wait for all pre-existing RCU read-side critical sections
+void synchronize_rcu(void);
+// Call a function after all pre-existing RCU 
+// read-side critical sections
+void call_rcu(struct rcu_head *head, rcu_callback_t func);
+// Assign v to p
+void rcu_assign_pointer(void *p, void *v);
+// Access data protected by RCU
+void *rcu_dereference(void *p);
+```
+
 ## Atomic variables && bitops
 ```c
 void atomic_set(atomic_t *v, int i);
@@ -60,12 +100,22 @@ int  atomic_cmpxchg(atomic_t *v,  int old, int new);
 void set_bit(int nr,  volatile unsigned long *addr);
 void clear_bit(int nr,  volatile unsigned long *addr);
 ```
-## Per CPU variables //tbd
-
-# IO 
-## Access setup
+## Per CPU variables 
 ```c
-/* Port based IO */
+// Declare a per-CPU variable
+DEFINE_PER_CPU(type, name);
+
+// Access per-CPU variable for the current CPU, 
+// enter preempt disabled section. Note that
+// this is an L-value, so you can assign to it.
+get_cpu_var(name);
+
+// Exit preempt disabled section
+void put_cpu_var(name);
+```
+# IO 
+## Port based IO 
+```c
 struct resource * request_region( unsigned long first,  
        unsigned long n,  const char *name);
 void release_region(unsigned long start, unsigned long n);
@@ -81,8 +131,9 @@ void outl(unsigned long word, int port)
    you must map those in memory with ioport_map */
 void *ioport_map(unsigned long port, unsigned int count);
 void ioport_unmap(void *addr);
-
-/* Memory mapped IO */
+```
+## Memory mapped IO
+```c
 struct resource *request_mem_region(unsigned long start, 
   unsigned long len, char *name);
 void release_mem_region(unsigned long start, unsigned long len);
@@ -111,11 +162,30 @@ int request_irq(unsigned int irq_no, irq_handler_t handler,
 
 void free_irq(unsigned int irq_no, void *dev_id);
 ```
-## Tasklets //tbd
-## Workqueues //tbd
-## Timers //tbd
-# Misc //tbd
+## Tasklets
+```c 
+// the callback type
+void (*callback)(struct tasklet_struct *t); 
 
+// declare a tasklet
+DECLARE_TASKLET(name, callback);
+
+// schedule a tasklet; essentially puts the tasklet 
+// in a softirq queue, if it is not already scheduled.
+void tasklet_schedule(struct tasklet_struct *t);
+```
+
+## Workqueues //tbd
+
+## Timers
+
+# Misc //tbd
+```c
+//container_of - derive a pointer to the containing structure 
+// given a pointer to a member
+container_of(member_ptr, container_type, member_field_name)
+
+```
 ## Userspace access //tbd
 
 ::: 
