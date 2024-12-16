@@ -18,6 +18,8 @@ header-includes: |
   \usepackage{fancyhdr}
   \usepackage{ulem}
   \pagestyle{fancy}
+  \fancyhead[LE,RO]{}
+  \fancyhead[RE,LO]{Last build: \today}
   \fancyhead[CO,CE]{Advanced Operating Systems - part B - Kernel API Cheatsheet}
   \fancyfoot[CO,CE]{Advanced Operating Systems - part B - Kernel API Cheatsheet}
   \fancyfoot[LE,RO]{\thepage}
