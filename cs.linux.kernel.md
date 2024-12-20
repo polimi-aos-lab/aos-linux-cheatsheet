@@ -211,11 +211,15 @@ void schedule_delayed_work(struct delayed_work *work,
 
 
 ```c 
-// Initializes a high-resolution timer. You need to specify 
-// the clock source (clock_id) which can be CLOCK_MONOTONIC 
-// or CLOCK_REALTIME, and the mode (mode), which can be 
-// either HRTIMER_MODE_ABS (absolute) or HRTIMER_MODE_REL 
-// (relative).
+// Initializes a high-resolution timer. 
+// clock_id can be:
+// - CLOCK_MONOTONIC: always moves forward without regression
+// - CLOCK_REALTIME: current time of day, subject to regression
+//
+// mode can be:
+// - HRTIMER_MODE_ABS (absolute, e.g., at 12:00AM) 
+// - HRTIMER_MODE_REL (relative, e.g., 10 seconds from now)
+//
 void hrtimer_init(struct hrtimer *timer, 
    clockid_t clock_id, enum hrtimer_mode mode);
 
@@ -234,9 +238,14 @@ void hrtimer_start(struct hrtimer *timer, ktime_t time,
 // Converts a number of nanoseconds to a ktime_t value.
 ktime_t ns_to_ktime(u64 ns);
 
-// Moves the timer forward by the specified interval.
+// Moves the timer forward by the specified interval 
+// (in any case is relative). 
 ktime_t hrtimer_forward_now(struct hrtimer *timer, 
 ktime_t interval);
+
+// Cancels a timer.
+int hrtimer_cancel(struct hrtimer *timer);
+
 ```
 
 ## Misc
