@@ -13,7 +13,7 @@ mainfont: Helvetica
 linkcolor: blue
 colorlinks: true 
 monofont: Fira Code 
-monofontoptions: 'Scale=0.7'
+monofontoptions: 'Scale=0.65'
 header-includes: |
   \usepackage{fancyhdr}
   \usepackage{ulem}
@@ -23,7 +23,7 @@ header-includes: |
   \fancyhead[CO,CE]{Advanced Operating Systems - part B - Kernel API Cheatsheet}
   \fancyfoot[CO,CE]{Advanced Operating Systems - part B - Kernel API Cheatsheet}
   \fancyfoot[LE,RO]{\thepage}
-  \linespread{0.75}
+  \linespread{0.70}
 ---
 
 ::: {.three-columns columngap=3em column-rule="1px solid black"}
@@ -42,32 +42,19 @@ int kthread_stop(struct task_struct *k);
 bool kthread_should_stop(void);
 ```
 
-### Waitqueues 
-[[`wait.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/wait.h) 
-```c
-DECLARE_WAIT_QUEUE_HEAD(<name>);
-
-// Wait for a condition to be true, interruptible
-wait_event_interruptible(wait_queue_head_t wq, condition); 
-
-// Wakes all non-exclusive waiters from the wait queue 
-// that are in an interruptible sleep state and 
-// just one in exclusive state. This must be called
-// whenever variables that impact the "condition" 
-// are changed.
-void wake_up_interruptible(wait_queue_head_t *q);
-```
-
 ### Spinlocks
 [[`spinlock.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/spinlock.h) 
 ```c
 DEFINE_SPINLOCK(<name>); 
 spin_lock(spinlock_t *lock);
 spin_unlock(spinlock_t *lock);
-/* IRQ enabble/disable variants. Note that these
-   are macros, so flags is an l-value. */
+
+/* Spins until lock free, then 
+   acquires it and disables interrupts
+   saving their current state in flags */
 spin_lock_irqsave(spinlock_t *lock, 
   unsigned long flags);
+/* Unlock, and restore interrupt flags */
 spin_unlock_irqrestore(spinlock_t *lock, 
   unsigned long flags);
 
@@ -78,6 +65,31 @@ void read_unlock(rwlock_t *lock);
 void write_lock(rwlock_t *lock);
 void write_unlock(rwlock_t *lock);
 /* *_irqsave, *_irqrestore variants do exist as well. */
+```
+
+### Waitqueues 
+[[`wait.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/wait.h) 
+```c
+// declares and inits wait queue head <name>
+DECLARE_WAIT_QUEUE_HEAD(<name>);
+// or initialise it
+init_waitqueue_head(*wq_head);
+
+// Wait for a condition to be true, interruptible
+wait_event_interruptible(*wq_head, condition); 
+
+// As above, sleep until a condition gets true.
+// The condition is checked under the lock. This is expected
+// to be called with the lock taken. And will return with lock
+// taken
+wait_event_interruptible_lock_irq(*wq_head, condition, lock)
+
+// Wakes all non-exclusive waiters from the wait queue 
+// that are in an interruptible sleep state and 
+// just one in interruptible exclusive state. This must be called
+// whenever variables that supposedly impact the "condition" 
+// are changed.
+void wake_up_interruptible(*wq_head);
 ```
 
 ### RCU
