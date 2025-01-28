@@ -141,21 +141,33 @@ get_cpu_var(name);
 void put_cpu_var(name);
 ```
 
-## IO 
+## IO
+### Character devices
+[[`fs.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/fs.h)  
+
+```c
+struct file_operations {
+	ssize_t (*read) (struct file *, char __user *, size_t, loff_t *);
+	ssize_t (*write) (struct file *, const char __user *, size_t, loff_t *);
+	int (*open) (struct inode *, struct file *);
+	int (*release) (struct inode *, struct file *);
+}
+// Register a chrdev device driver, if major=0, returns assigned major 
+int register_chrdev(unsigned int major, const char *name,
+				  const struct file_operations *fops);
+void unregister_chrdev(unsigned int major, const char *name)
+// Get minor from the device file pointer
+minor = iminor(file->f_path.dentry->d_inode);
+```
+
 ### Port based IO
 [[`ioport.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/ioport.h) 
 ```c
 struct resource * request_region( unsigned long first,  
        unsigned long n,  const char *name);
 void release_region(unsigned long start, unsigned long n);
-
-unsigned inb(int port); /* one byte */
-void outb(unsigned char byte, int port) 
-unsigned inw(int port)  /* two bytes */
-void outw(unsigned short word, int port) 
-unsigned inl (int port) /* four bytes */ 
-void outl(unsigned long word, int port) 
-
+unsigned in[b,w,l](int port); /* read one,two and four bytes */
+void out[b,w,l](unsigned char byte, int port) /* write */
 /* Ports can use ioread and iowrite (below) but 
    you must map those in memory with ioport_map */
 void *ioport_map(unsigned long port, unsigned int count);
@@ -167,27 +179,20 @@ void ioport_unmap(void *addr);
 struct resource *request_mem_region(unsigned long start, 
   unsigned long len, char *name);
 void release_mem_region(unsigned long start, unsigned long len);
-
 /* For memory mapped IO you must obtain a virtual address in 
    kernel space before any access */
 void *ioremap(unsigned long phys_addr, unsigned long size);
 void iounmap(void * addr);
-
-unsigned int ioread8(void *addr);
-unsigned int ioread16(void *addr);
-unsigned int ioread32(void *addr);
-void iowrite8(u8 value, void *addr);
-void iowrite16(u16 value, void *addr);
-void iowrite32(u32 value, void *addr);
+unsigned int ioread[8,16,32](void *addr); 
+void iowrite[8,16,32](u8 value, void *addr);
 ```
+
 ### Interrupts
 [[`interrupt.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/interrupt.h) 
 ```c
 typedef irqreturn_t (*irq_handler_t)(int, void *);
-
 int request_irq(unsigned int irq_no, irq_handler_t handler,
   unsigned long flags, const char *dev_name, void *dev_id);
-
 void free_irq(unsigned int irq_no, void *dev_id);
 ```
 ### Tasklets
@@ -195,10 +200,8 @@ void free_irq(unsigned int irq_no, void *dev_id);
 ```c 
 // the callback type
 void (*callback)(struct tasklet_struct *t); 
-
 // declare a tasklet
 DECLARE_TASKLET(name, callback);
-
 // schedule a tasklet; essentially puts the tasklet 
 // in a softirq queue, if it is not already scheduled.
 void tasklet_schedule(struct tasklet_struct *t);
@@ -209,13 +212,9 @@ void tasklet_schedule(struct tasklet_struct *t);
 ```c
 // Declare a work data structure variable called name
 DECLARE_WORK(name, void (*func)(struct work_struct *work));
-
-// Schedule work on the system workqueue  
-void schedule_work(struct work_struct *work);
-// Schedule work on the system workqueue, 
-//but delay execution by delay milliseconds
-void schedule_delayed_work(struct delayed_work *work, 
-   unsigned long delay);
+// Schedule work on the system workqueue. Return 0 if
+// the same work is already scheduled.
+bool schedule_work(struct work_struct *work);
 ```
 
 ### Timers
@@ -234,27 +233,27 @@ void schedule_delayed_work(struct delayed_work *work,
 //
 void hrtimer_init(struct hrtimer *timer, 
    clockid_t clock_id, enum hrtimer_mode mode);
-
 // After initializing the timer, you need to register the 
 // callback function that will be called when the timer 
 // expires. You do it by assigning the function field of 
 // the timer to the callback function. 
 timer->function = <your_callback_function>;
-
 // Starts a high-resolution timer. You need to specify 
 // the timer to start (timer), the time at which the timer 
 // should expire (time), and the mode (mode).
 void hrtimer_start(struct hrtimer *timer, ktime_t time, 
   const enum hrtimer_mode mode);
-
-// Converts a number of nanoseconds to a ktime_t value.
-ktime_t ns_to_ktime(u64 ns);
-
+// Converts fro/to number of milli/nanoseconds to/fro a ktime_t value.
+ktime_t (ns/ms)_to_ktime(u64 ns);
+u64 ktime_to_(ns/ms)(u64 ns/ms)
+ktime_t ktime_set(s64 secs, unsigned long ns)
+// Get current time measured relative to 
+// the UNIX epoch starting in 1970.  
+ktime_t ktime_get_real()
 // Moves the timer forward by the specified interval 
 // (in any case is relative). 
 ktime_t hrtimer_forward_now(struct hrtimer *timer, 
 ktime_t interval);
-
 // Cancels a timer.
 int hrtimer_cancel(struct hrtimer *timer);
 
@@ -272,11 +271,9 @@ int hrtimer_cancel(struct hrtimer *timer);
 // Allocate contiguous memory for an object of size `size`
 void *kmalloc(size_t size, gfp_t flags);
 void kfree(void *ptr);
-
 // Allocate non-contiguous memory` 
 void *vmalloc(unsigned long size);
 void vfree(void *addr);
-
 // kmem_cache_create - create a new cache. 
 // Use NULL for ctor, flags and align if unsure
 struct kmem_cache *kmem_cache_create(const char *name, 
@@ -284,48 +281,46 @@ struct kmem_cache *kmem_cache_create(const char *name,
   void (*ctor)(void *));
 // or
  KMEM_CACHE(my_object_type, flags);
-
 //kmem_cache_destroy - destroy a cache
 void kmem_cache_destroy(struct kmem_cache *cachep); 
-
 // kmem_cache_alloc - allocate an object from a cache
 void *kmem_cache_alloc(struct kmem_cache *cachep, 
     gfp_t flags);
-
 // kmem_cache_free - free an object to a cache
 void kmem_cache_free(struct kmem_cache *cachep, void *objp);
 ```
+### File management 
 
+```c 
+// In kernel file operations
+// flags: O_CREAT, O_APPEND, O_WRONLY, O_RDONLY`
+struct file *filp_open(const char *, int flags, umode_t mode);
+// just use id=NULL to close
+int filp_close(struct file *, fl_owner_t id);
+ssize_t kernel_read(struct file *, void *, size_t, loff_t *);
+ssize_t kernel_write(struct file *, const void *, size_t, loff_t *);
+```
 ### Containers
 [[`container_of.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/container_of.h) 
 ```c
 //container_of - derive a pointer to the containing structure 
 // given a pointer to a member
 container_of(member_ptr, container_type, member_field_name)
-
-```
-
-### Lists
-```c
 // Declare a list head called 'head'
 static LIST_HEAD(head);
-
 // Define your custom list_element structure
 // which must have a field of type `struct list_head` 
 struct my_list_element_t {
   int data;
   struct list_head __list;
 };
-
 // Declare an element of type `my_list_element_t`
 struct my_list_element_t t;
-
 // Add `t` to front or end of the list `head`
 list_add(&t->__list, &head);
 list_add_tail(&t->__list, &head);
 // remove `t` from the list in which it is contained
 list_del(&t->__list);
-
 // Iterate over the list
 list_for_each_entry(e, &head, __list) {
   // inside here, e is a pointer to the current element 
@@ -342,12 +337,20 @@ list_for_each_entry(e, &head, __list) {
 // not copied
 unsigned long copy_to_user(void *to, const void *from, 
    unsigned long n);
-
 // copy_from_user - copy data from user space to 
 // kernel space returns the number of bytes that were 
 // not copied
 unsigned long copy_from_user(void *to, const void *from, 
    unsigned long n);
+```
+
+### Other (Random Numbers)
+
+```c
+// produce random number
+void get_random_bytes(void *buf, int nbytes);
+u32 get_random_u32();
+u64 get_random_u64();
 ```
 
 ::: 
