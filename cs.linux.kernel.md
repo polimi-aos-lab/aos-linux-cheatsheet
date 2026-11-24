@@ -200,7 +200,8 @@ void free_irq(unsigned int irq_no, void *dev_id);
 ```c 
 // the callback type
 void (*callback)(struct tasklet_struct *t); 
-// declare a tasklet
+// declare a variable "struct tasklet_struct name" 
+// and assign a callback (can be used globally)
 DECLARE_TASKLET(name, callback);
 // schedule a tasklet; essentially puts the tasklet 
 // in a softirq queue, if it is not already scheduled.
@@ -210,9 +211,10 @@ void tasklet_schedule(struct tasklet_struct *t);
 ### Workqueues
 [[`workqueue.h`]{.underline}](https://elixir.bootlin.com/linux/v5.16-rc1/source/include/linux/workqueue.h) 
 ```c
-// Declare a work data structure variable called name
+// Declare a "struct work_struct name" variable and 
+// assign a callback (can be used globally)
 DECLARE_WORK(name, void (*func)(struct work_struct *work));
-// Schedule work on the system workqueue. Return 0 if
+// Schedule work on the system workqueue "events/n". Return 0 if
 // the same work is already scheduled.
 bool schedule_work(struct work_struct *work);
 ```
